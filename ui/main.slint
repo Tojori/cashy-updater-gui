@@ -1,0 +1,150 @@
+// Hauptfenster des Cashy Updaters.
+
+import { Palette } from "std-widgets.slint";
+import { Theme, Icon, Icons } from "theme.slint";
+import { AppBridge, PackageRow, StepRow, LogRow, NewsRow, InfoRow } from "bridge.slint";
+import { AppButton, Card, SectionTitle } from "components/controls.slint";
+import { Sidebar } from "components/sidebar.slint";
+import { DashboardPage } from "pages/dashboard.slint";
+import { UpdatesPage } from "pages/updates.slint";
+import { LogsPage } from "pages/logs.slint";
+import { SettingsPage } from "pages/settings.slint";
+
+export { AppBridge, Theme, PackageRow, StepRow, LogRow, NewsRow, InfoRow }
+
+export component MainWindow inherits Window {
+    title: "Cashy Updater";
+    icon: @image-url("../packaging/desktop/cashy-updater-gui.svg");
+    min-width: 980px;
+    min-height: 660px;
+    preferred-width: 1220px;
+    preferred-height: 800px;
+    background: Theme.bg;
+    default-font-size: Theme.font-body;
+
+    property <bool> dark: Theme.dark;
+    init => {
+        Palette.color-scheme = Theme.dark ? ColorScheme.dark : ColorScheme.light;
+    }
+    changed dark => {
+        Palette.color-scheme = self.dark ? ColorScheme.dark : ColorScheme.light;
+    }
+
+    shortcuts := FocusScope {
+        key-pressed(event) => {
+            if (event.modifiers.control && event.text == "1") {
+                AppBridge.page = 0;
+                return accept;
+            }
+            if (event.modifiers.control && event.text == "2") {
+                AppBridge.page = 1;
+                return accept;
+            }
+            if (event.modifiers.control && event.text == "3") {
+                AppBridge.page = 2;
+                return accept;
+            }
+            if (event.modifiers.control && event.text == "4") {
+                AppBridge.page = 3;
+                return accept;
+            }
+            if (event.text == Key.F5 && AppBridge.can-check) {
+                AppBridge.check-updates();
+                return accept;
+            }
+            return reject;
+        }
+
+        HorizontalLayout {
+            Sidebar { }
+            Rectangle {
+                horizontal-stretch: 1;
+                if AppBridge.page == 0: DashboardPage { }
+                if AppBridge.page == 1: UpdatesPage { }
+                if AppBridge.page == 2: LogsPage { }
+                if AppBridge.page == 3: SettingsPage { }
+            }
+        }
+    }
+
+    // Kurzmeldung unten rechts
+    if AppBridge.toast-text != "": Rectangle {
+        x: parent.width - self.width - 24px;
+        y: parent.height - self.height - 24px;
+        width: min(460px, toast-text.preferred-width + 60px);
+        height: toast-text.preferred-height + 24px;
+        border-radius: Theme.radius-sm;
+        background: Theme.surface;
+        border-width: 1px;
+        border-color: Theme.tone-color(AppBridge.toast-tone);
+        drop-shadow-blur: 18px;
+        drop-shadow-color: Theme.shadow;
+        accessible-role: text;
+        accessible-label: AppBridge.toast-text;
+        Rectangle {
+            x: 0;
+            width: 4px;
+            border-radius: 2px;
+            background: Theme.tone-color(AppBridge.toast-tone);
+        }
+        toast-text := Text {
+            x: 20px;
+            width: parent.width - 32px;
+            text: AppBridge.toast-text;
+            color: Theme.text;
+            wrap: word-wrap;
+        }
+    }
+
+    // Schließen während eines Updates
+    if AppBridge.close-dialog-visible: Rectangle {
+        background: #000000a0;
+        TouchArea { }
+        Card {
+            width: 520px;
+            height: dialog-layout.preferred-height;
+            accessible-role: groupbox;
+            accessible-label: "Update läuft";
+            dialog-layout := VerticalLayout {
+                padding: 24px;
+                spacing: 14px;
+                HorizontalLayout {
+                    spacing: 10px;
+                    Icon {
+                        name: Icons.warning;
+                        color: Theme.warning;
+                        size: 22px;
+                    }
+                    SectionTitle {
+                        text: "Ein Update-Lauf ist aktiv";
+                    }
+                }
+                Text {
+                    text: AppBridge.close-dialog-can-cancel
+                        ? "arch-update hat noch keine Pakete verändert. Der Lauf kann jetzt sicher abgebrochen und die Anwendung beendet werden."
+                        : "pacman verändert gerade Pakete. Ein Beenden würde den Vorgang unterbrechen und könnte das System beschädigen. Das Fenster bleibt bis zum Abschluss geöffnet.";
+                    color: Theme.text-muted;
+                    wrap: word-wrap;
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: end;
+                    if AppBridge.close-dialog-can-cancel: AppButton {
+                        text: "Abbrechen und beenden";
+                        kind: 3;
+                        clicked => {
+                            AppBridge.close-cancel-and-quit();
+                        }
+                    }
+                    AppButton {
+                        text: "Weiter warten";
+                        kind: 0;
+                        clicked => {
+                            AppBridge.close-dialog-visible = false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,41 @@
+[package]
+name = "cashy-updater-gui"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+description = "Grafische Linux-Oberfläche für cachy-update (arch-update) von CachyOS"
+readme = "README.md"
+build = "build.rs"
+publish = false
+
+[lib]
+name = "cashy_updater_gui"
+path = "src/lib.rs"
+
+[[bin]]
+name = "cashy-updater-gui"
+path = "src/main.rs"
+
+[dependencies]
+slint = "1.18"
+portable-pty = "0.9"
+arboard = { version = "3.6", default-features = false, features = ["wayland-data-control"] }
+serde = { version = "1", features = ["derive"] }
+toml = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", default-features = false, features = ["std", "fmt", "registry", "ansi"] }
+regex = "1"
+libc = "0.2"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+
+[build-dependencies]
+slint-build = "1.18"
+
+[dev-dependencies]
+tempfile = "3"
+# Slint-Test-Backend für GUI-Tests ohne Display (Version muss zu slint passen).
+i-slint-backend-testing = "=1.18.1"
+
+[profile.release]
+lto = "thin"
+strip = true

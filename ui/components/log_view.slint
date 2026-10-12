@@ -1,0 +1,98 @@
+import { ListView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { AppBridge, LogRow } from "../bridge.slint";
+
+component LogLine inherits Rectangle {
+    in property <LogRow> entry;
+    in property <int> index;
+    property <color> level-color: entry.level == 3 ? Theme.danger : entry.level == 2 ? Theme.warning : entry.level == 0 ? Theme.text-muted : Theme.accent;
+
+    height: 30px;
+    background: entry.selected ? Theme.accent.with-alpha(0.18) : ta.has-hover ? Theme.surface-hover : Math.mod(index, 2) == 0 ? transparent : Theme.surface-2.with-alpha(0.45);
+    accessible-role: list-item;
+    accessible-label: entry.time + " " + entry.level-text + " " + entry.source + ": " + entry.message;
+    accessible-checked: entry.selected;
+    accessible-checkable: true;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 12px;
+        Text {
+            text: root.entry.time;
+            width: 132px;
+            color: Theme.text-muted;
+            font-family: "monospace";
+            font-size: 12px;
+            vertical-alignment: center;
+        }
+        Rectangle {
+            width: 70px;
+            height: 20px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 10px;
+            background: root.level-color.with-alpha(0.15);
+            Text {
+                text: root.entry.level-text;
+                color: root.level-color;
+                font-size: 11px;
+                font-weight: 700;
+            }
+        }
+        Text {
+            text: root.entry.source;
+            width: 86px;
+            color: Theme.text-muted;
+            font-size: 12px;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        Text {
+            text: root.entry.message;
+            color: Theme.text;
+            font-family: "monospace";
+            font-size: 12px;
+            vertical-alignment: center;
+            overflow: elide;
+            horizontal-stretch: 1;
+        }
+    }
+
+    ta := TouchArea {
+        clicked => {
+            AppBridge.log-toggle-select(root.index);
+        }
+    }
+}
+
+export component LogList inherits Rectangle {
+    background: Theme.surface;
+    border-radius: Theme.radius;
+    border-width: 1px;
+    border-color: Theme.border;
+    clip: true;
+
+    // Neue Einträge: bei aktivem „Folgen“ ans Ende scrollen.
+    property <int> revision: AppBridge.log-revision;
+    changed revision => {
+        root.scroll-to-end();
+    }
+
+    public function scroll-to-end() {
+        if (AppBridge.log-follow) {
+            lv.content-y = min(0px, lv.visible-height - lv.content-height);
+        }
+    }
+
+    if AppBridge.log-rows.length == 0: Text {
+        text: "Keine Einträge für die aktuelle Filterauswahl.";
+        color: Theme.text-muted;
+    }
+
+    lv := ListView {
+        for item[i] in AppBridge.log-rows: LogLine {
+            entry: item;
+            index: i;
+        }
+    }
+}

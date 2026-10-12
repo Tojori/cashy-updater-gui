@@ -1,0 +1,8 @@
+#!/bin/bash
+# Test-Double für systemctl --user (Timer-Status in einer Datei).
+state="${FAKE_TIMER_STATE:-/nonexistent}"
+case "${2}" in
+	is-enabled) cat "${state}" 2>/dev/null || echo disabled; [ "$(cat "${state}" 2>/dev/null)" = enabled ] ;;
+	disable) echo disabled > "${state}" ;;
+	*) exit 1 ;;
+esac

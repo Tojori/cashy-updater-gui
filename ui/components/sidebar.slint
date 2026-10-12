@@ -1,0 +1,186 @@
+import { Theme, Icon, Icons } from "../theme.slint";
+import { AppBridge } from "../bridge.slint";
+import { ToneDot } from "controls.slint";
+
+component NavItem inherits Rectangle {
+    in property <string> text;
+    in property <string> icon;
+    in property <int> index;
+    in property <int> badge: 0;
+    in property <string> shortcut;
+    property <bool> active: AppBridge.page == index;
+
+    accessible-role: tab;
+    accessible-label: root.text;
+    accessible-action-default => {
+        AppBridge.page = root.index;
+    }
+
+    height: 42px;
+    border-radius: Theme.radius-sm;
+    background: active ? Theme.surface-2 : ta.has-hover ? Theme.surface-hover : transparent;
+
+    Rectangle {
+        x: 0;
+        width: 3px;
+        height: parent.height - 16px;
+        border-radius: 2px;
+        background: root.active ? Theme.accent : transparent;
+    }
+
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 10px;
+        spacing: 12px;
+        Icon {
+            name: root.icon;
+            color: root.active ? Theme.accent : Theme.text-muted;
+        }
+        Text {
+            text: root.text;
+            color: root.active ? Theme.text : Theme.text-muted;
+            font-weight: root.active ? 700 : 500;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+        if root.badge > 0: Rectangle {
+            y: (parent.height - self.height) / 2;
+            height: 20px;
+            width: max(20px, badge-text.preferred-width + 12px);
+            border-radius: 10px;
+            background: Theme.warning;
+            badge-text := Text {
+                text: root.badge;
+                color: Theme.dark ? #1a1200 : #ffffff;
+                font-size: 11px;
+                font-weight: 700;
+            }
+        }
+    }
+
+    fs := FocusScope {
+        key-pressed(event) => {
+            if (event.text == Key.Return || event.text == " ") {
+                AppBridge.page = root.index;
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            AppBridge.page = root.index;
+        }
+    }
+
+    Rectangle {
+        border-radius: Theme.radius-sm;
+        border-width: fs.has-focus ? 2px : 0px;
+        border-color: Theme.focus;
+    }
+}
+
+export component Sidebar inherits Rectangle {
+    width: 236px;
+    background: Theme.sidebar;
+
+    Rectangle {
+        x: parent.width - 1px;
+        width: 1px;
+        background: Theme.border;
+    }
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 6px;
+
+        HorizontalLayout {
+            spacing: 12px;
+            padding-bottom: 18px;
+            Rectangle {
+                width: 40px;
+                height: 40px;
+                border-radius: 11px;
+                background: @linear-gradient(135deg, #2cc3d6 0%, #1b6fd1 100%);
+                Icon {
+                    name: Icons.refresh;
+                    color: #ffffff;
+                    size: 22px;
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                Text {
+                    text: "Cashy Updater";
+                    color: Theme.text;
+                    font-size: 16px;
+                    font-weight: 800;
+                }
+                Text {
+                    text: "Oberfläche für cachy-update";
+                    color: Theme.text-muted;
+                    font-size: 11px;
+                }
+            }
+        }
+
+        NavItem {
+            text: "Übersicht";
+            icon: Icons.home;
+            index: 0;
+        }
+        NavItem {
+            text: "Updates";
+            icon: Icons.refresh;
+            index: 1;
+            badge: AppBridge.pending-total;
+        }
+        NavItem {
+            text: "Protokoll";
+            icon: Icons.list;
+            index: 2;
+        }
+        NavItem {
+            text: "Einstellungen";
+            icon: Icons.gear;
+            index: 3;
+        }
+
+        Rectangle {
+            vertical-stretch: 1;
+        }
+
+        Rectangle {
+            background: Theme.surface-2;
+            border-radius: Theme.radius-sm;
+            accessible-role: text;
+            accessible-label: "Status: " + AppBridge.state-title;
+            VerticalLayout {
+                padding: 12px;
+                spacing: 4px;
+                HorizontalLayout {
+                    spacing: 8px;
+                    ToneDot {
+                        tone: AppBridge.state-tone;
+                        y: (parent.height - self.height) / 2;
+                    }
+                    Text {
+                        text: AppBridge.state-title;
+                        color: Theme.text;
+                        font-weight: 700;
+                        font-size: 12px;
+                        overflow: elide;
+                        horizontal-stretch: 1;
+                    }
+                }
+                Text {
+                    text: "Strg+1–4 Navigation · F5 Prüfen";
+                    color: Theme.text-muted;
+                    font-size: 11px;
+                }
+            }
+        }
+    }
+}

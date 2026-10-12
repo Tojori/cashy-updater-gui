@@ -1,0 +1,145 @@
+import { CheckBox, LineEdit, Switch } from "std-widgets.slint";
+import { Theme, Icons } from "../theme.slint";
+import { AppBridge } from "../bridge.slint";
+import { AppButton, Card, Muted } from "../components/controls.slint";
+import { LogList } from "../components/log_view.slint";
+
+export component LogsPage inherits Rectangle {
+    VerticalLayout {
+        padding: 28px;
+        spacing: 14px;
+
+        VerticalLayout {
+            spacing: 2px;
+            Text {
+                text: "Protokoll";
+                color: Theme.text;
+                font-size: Theme.font-title;
+                font-weight: 800;
+            }
+            Text {
+                text: "Meldungen der Anwendung und vollständige Ausgabe von arch-update";
+                color: Theme.text-muted;
+            }
+        }
+
+        Card {
+            VerticalLayout {
+                padding: 14px;
+                spacing: 12px;
+                HorizontalLayout {
+                    spacing: 16px;
+                    CheckBox {
+                        text: "Debug";
+                        checked <=> AppBridge.log-show-debug;
+                        toggled => {
+                            AppBridge.log-filter-changed();
+                        }
+                    }
+                    CheckBox {
+                        text: "Info";
+                        checked <=> AppBridge.log-show-info;
+                        toggled => {
+                            AppBridge.log-filter-changed();
+                        }
+                    }
+                    CheckBox {
+                        text: "Warnung";
+                        checked <=> AppBridge.log-show-warn;
+                        toggled => {
+                            AppBridge.log-filter-changed();
+                        }
+                    }
+                    CheckBox {
+                        text: "Fehler";
+                        checked <=> AppBridge.log-show-error;
+                        toggled => {
+                            AppBridge.log-filter-changed();
+                        }
+                    }
+                    LineEdit {
+                        horizontal-stretch: 1;
+                        placeholder-text: "Protokoll durchsuchen …";
+                        text <=> AppBridge.log-query;
+                        edited(text) => {
+                            AppBridge.log-filter-changed();
+                        }
+                    }
+                    Switch {
+                        text: "Neuen Einträgen folgen";
+                        checked <=> AppBridge.log-follow;
+                    }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    AppButton {
+                        text: "Auswahl kopieren";
+                        icon: Icons.copy;
+                        clicked => {
+                            AppBridge.log-copy-selected();
+                        }
+                    }
+                    AppButton {
+                        text: "Alle auswählen";
+                        kind: 2;
+                        clicked => {
+                            AppBridge.log-select-all();
+                        }
+                    }
+                    AppButton {
+                        text: "Exportieren";
+                        icon: Icons.export;
+                        clicked => {
+                            AppBridge.log-export();
+                        }
+                    }
+                    AppButton {
+                        text: "Ordner öffnen";
+                        icon: Icons.folder;
+                        kind: 2;
+                        clicked => {
+                            AppBridge.open-log-folder();
+                        }
+                    }
+                    AppButton {
+                        text: "Anzeige leeren";
+                        icon: Icons.trash;
+                        kind: 2;
+                        clicked => {
+                            AppBridge.log-clear-view();
+                        }
+                    }
+                    Rectangle {
+                        horizontal-stretch: 1;
+                    }
+                    Text {
+                        text: AppBridge.log-info;
+                        color: Theme.text-muted;
+                        vertical-alignment: center;
+                        font-size: Theme.font-small;
+                    }
+                }
+            }
+        }
+
+        if AppBridge.log-has-more: HorizontalLayout {
+            alignment: center;
+            AppButton {
+                text: "Ältere Einträge laden";
+                kind: 2;
+                icon: Icons.chevron-up;
+                clicked => {
+                    AppBridge.log-load-more();
+                }
+            }
+        }
+
+        LogList {
+            vertical-stretch: 1;
+        }
+
+        Muted {
+            text: (AppBridge.log-file != "" ? "Logdatei: " + AppBridge.log-file + " · " : "") + "Klick auf eine Zeile wählt sie aus. „Anzeige leeren“ entfernt Einträge nur aus der Ansicht, nicht aus der Logdatei.";
+        }
+    }
+}

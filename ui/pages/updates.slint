@@ -1,0 +1,213 @@
+import { ListView, ScrollView } from "std-widgets.slint";
+import { Theme, Icon, Icons } from "../theme.slint";
+import { AppBridge, PackageRow } from "../bridge.slint";
+import { AppButton, Card, Banner, ErrorBanner, SectionTitle, Muted, Badge } from "../components/controls.slint";
+import { StepsBar, ProgressPanel, PromptPanel } from "../components/progress_view.slint";
+
+component PackageLine inherits Rectangle {
+    in property <PackageRow> pkg;
+    height: 34px;
+    accessible-role: list-item;
+    accessible-label: pkg.source + " " + pkg.name + (pkg.available != "" ? " " + pkg.current + " auf " + pkg.available : "");
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 10px;
+        Badge {
+            text: root.pkg.source;
+            tone: root.pkg.source == "AUR" ? 2 : root.pkg.source == "Flatpak" ? 1 : 4;
+            width: 66px;
+            y: (parent.height - self.height) / 2;
+        }
+        Text {
+            text: root.pkg.name;
+            color: Theme.text;
+            font-weight: 600;
+            vertical-alignment: center;
+            overflow: elide;
+            min-width: min(self.preferred-width, 160px);
+            horizontal-stretch: 1;
+        }
+        if root.pkg.available != "": Text {
+            text: root.pkg.current + "  →  " + root.pkg.available;
+            color: Theme.text-muted;
+            font-family: "monospace";
+            font-size: 12px;
+            vertical-alignment: center;
+            horizontal-alignment: right;
+            overflow: elide;
+            horizontal-stretch: 2;
+        }
+    }
+}
+
+export component UpdatesPage inherits Rectangle {
+    VerticalLayout {
+        padding: 28px;
+        spacing: 14px;
+
+        HorizontalLayout {
+            spacing: 10px;
+            Text {
+                text: "Updates";
+                color: Theme.text;
+                font-size: Theme.font-title;
+                font-weight: 800;
+                horizontal-stretch: 1;
+                vertical-alignment: center;
+            }
+            AppButton {
+                text: AppBridge.checking ? "Suche läuft …" : "Nach Updates suchen";
+                icon: Icons.refresh;
+                enabled: AppBridge.can-check;
+                clicked => {
+                    AppBridge.check-updates();
+                }
+            }
+            AppButton {
+                text: "Update installieren";
+                icon: Icons.download;
+                kind: 0;
+                enabled: AppBridge.can-install;
+                clicked => {
+                    AppBridge.start-upgrade();
+                }
+            }
+            if AppBridge.busy: AppButton {
+                text: "Abbrechen";
+                icon: Icons.stop;
+                kind: 3;
+                enabled: AppBridge.can-cancel;
+                clicked => {
+                    AppBridge.cancel-operation();
+                }
+            }
+            AppButton {
+                text: "Im Terminal";
+                icon: Icons.terminal;
+                kind: 2;
+                enabled: AppBridge.can-open-terminal;
+                clicked => {
+                    AppBridge.open-terminal();
+                }
+            }
+        }
+
+        Text {
+            text: AppBridge.include-devel ? "Installation über „arch-update --devel“ (inkl. AUR-Entwicklungspakete) – alle Abfragen von arch-update erscheinen hier." : "Installation über arch-update – alle Abfragen (Bestätigung, Passwort, Neustart) erscheinen hier.";
+            color: Theme.text-muted;
+            wrap: word-wrap;
+        }
+
+        StepsBar { }
+
+        if AppBridge.session-active && !AppBridge.can-cancel: Banner {
+            tone: 2;
+            title: "Paketänderungen laufen – bitte nicht ausschalten";
+            text: "Ein Abbruch ist in dieser Phase nicht sicher möglich. Das Fenster bleibt bis zum Abschluss geöffnet.";
+        }
+
+        if AppBridge.error-visible: ErrorBanner {
+            title: AppBridge.error-title;
+            summary: AppBridge.error-summary;
+            details: AppBridge.error-details;
+            dismiss => {
+                AppBridge.dismiss-error();
+            }
+            copy => {
+                AppBridge.copy-error();
+            }
+        }
+
+        if AppBridge.result-visible && !AppBridge.error-visible: Banner {
+            tone: AppBridge.result-tone;
+            title: AppBridge.result-title;
+            text: AppBridge.result-text;
+        }
+
+        if AppBridge.session-active || AppBridge.checking: ProgressPanel { }
+
+        if AppBridge.session-active: PromptPanel { }
+
+        HorizontalLayout {
+            spacing: 14px;
+            vertical-stretch: 1;
+            min-height: 220px;
+
+            Card {
+                horizontal-stretch: 2;
+                vertical-stretch: 1;
+                VerticalLayout {
+                    padding: 14px;
+                    spacing: 10px;
+                    HorizontalLayout {
+                        SectionTitle {
+                            text: "Ausstehende Updates";
+                            horizontal-stretch: 1;
+                        }
+                        Text {
+                            text: AppBridge.pending-total;
+                            color: Theme.text-muted;
+                            vertical-alignment: center;
+                        }
+                    }
+                    if AppBridge.packages.length == 0: Muted {
+                        text: AppBridge.last-check == "Noch nie" ? "Noch keine Prüfung durchgeführt." : "arch-update hat bei der letzten Prüfung (" + AppBridge.last-check + ") keine Updates gemeldet.";
+                    }
+                    ListView {
+                        vertical-stretch: 1;
+                        for item in AppBridge.packages: PackageLine {
+                            pkg: item;
+                        }
+                    }
+                }
+            }
+
+            Card {
+                horizontal-stretch: 3;
+                vertical-stretch: 1;
+                VerticalLayout {
+                    padding: 14px;
+                    spacing: 10px;
+                    HorizontalLayout {
+                        SectionTitle {
+                            text: "Ausgabe von arch-update";
+                            horizontal-stretch: 1;
+                        }
+                        Muted {
+                            text: "letzte 400 Zeilen · vollständig im Protokoll";
+                            vertical-alignment: center;
+                        }
+                    }
+                    Rectangle {
+                        background: Theme.terminal-bg;
+                        border-radius: 8px;
+                        vertical-stretch: 1;
+                        clip: true;
+                        sv := ScrollView {
+                            property <int> revision: AppBridge.terminal-revision;
+                            changed revision => {
+                                self.content-y = min(0px, self.visible-height - self.content-height);
+                            }
+                            content-width: self.visible-width;
+                            content-height: max(self.visible-height, term.preferred-height + 20px);
+                            term := TextInput {
+                                x: 10px;
+                                y: 10px;
+                                width: sv.visible-width - 20px;
+                                text: AppBridge.terminal-text == "" ? "Noch keine Ausgabe. Mit „Update installieren“ wird arch-update gestartet." : AppBridge.terminal-text;
+                                read-only: true;
+                                single-line: false;
+                                wrap: word-wrap;
+                                color: AppBridge.terminal-text == "" ? Theme.terminal-text.with-alpha(0.5) : Theme.terminal-text;
+                                font-family: "monospace";
+                                font-size: 12px;
+                                accessible-label: "Ausgabe von arch-update";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

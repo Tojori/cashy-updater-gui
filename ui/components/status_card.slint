@@ -1,0 +1,58 @@
+import { Theme, Icon } from "../theme.slint";
+import { Card } from "controls.slint";
+
+// Informationskarte: Symbol, Bezeichnung, Wert und optionaler Hinweis.
+export component StatCard inherits Card {
+    in property <string> icon;
+    in property <string> label;
+    in property <string> value;
+    in property <string> note;
+    in property <int> note-tone: 0;
+    in property <int> icon-tone: 4;
+
+    accessible-role: text;
+    accessible-label: root.label + ": " + root.value + (root.note != "" ? ", " + root.note : "");
+    min-height: 118px;
+
+    VerticalLayout {
+        padding: 18px;
+        spacing: 8px;
+        alignment: start;
+        HorizontalLayout {
+            spacing: 10px;
+            Rectangle {
+                width: 30px;
+                height: 30px;
+                border-radius: 8px;
+                background: Theme.tone-color(root.icon-tone).with-alpha(0.14);
+                Icon {
+                    name: root.icon;
+                    color: Theme.tone-color(root.icon-tone);
+                    size: 17px;
+                }
+            }
+            Text {
+                text: root.label;
+                color: Theme.text-muted;
+                font-size: Theme.font-small;
+                font-weight: 600;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+                overflow: elide;
+            }
+        }
+        Text {
+            text: root.value;
+            color: Theme.text;
+            font-size: 17px;
+            font-weight: 700;
+            wrap: word-wrap;
+        }
+        if root.note != "": Text {
+            text: root.note;
+            color: root.note-tone == 0 ? Theme.text-muted : Theme.tone-color(root.note-tone);
+            font-size: Theme.font-small;
+            wrap: word-wrap;
+        }
+    }
+}

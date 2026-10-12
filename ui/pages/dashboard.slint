@@ -1,0 +1,242 @@
+import { ScrollView } from "std-widgets.slint";
+import { Theme, Icon, Icons } from "../theme.slint";
+import { AppBridge } from "../bridge.slint";
+import { AppButton, Card, Banner, ErrorBanner, SectionTitle, Muted } from "../components/controls.slint";
+import { StatCard } from "../components/status_card.slint";
+
+component StatusHero inherits Card {
+    accessible-role: groupbox;
+    accessible-label: "Update-Status: " + AppBridge.state-title;
+    HorizontalLayout {
+        padding: 22px;
+        spacing: 18px;
+        Rectangle {
+            width: 56px;
+            height: 56px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 28px;
+            background: Theme.tone-color(AppBridge.state-tone).with-alpha(0.15);
+            Icon {
+                name: AppBridge.state-tone == 1 ? Icons.check
+                    : AppBridge.state-tone == 3 ? Icons.error
+                    : AppBridge.state-tone == 2 ? Icons.download
+                    : AppBridge.state-tone == 4 ? Icons.refresh
+                    : Icons.info;
+                color: Theme.tone-color(AppBridge.state-tone);
+                size: 28px;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 4px;
+            horizontal-stretch: 1;
+            Text {
+                text: AppBridge.state-title;
+                color: Theme.text;
+                font-size: 22px;
+                font-weight: 800;
+                wrap: word-wrap;
+            }
+            Text {
+                text: AppBridge.state-description;
+                color: Theme.text-muted;
+                wrap: word-wrap;
+            }
+            if AppBridge.self-update != "": Text {
+                text: "cachy-update: " + AppBridge.self-update;
+                color: Theme.warning;
+                font-size: Theme.font-small;
+                wrap: word-wrap;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 8px;
+            AppButton {
+                text: AppBridge.checking ? "Suche läuft …" : "Nach Updates suchen";
+                icon: Icons.refresh;
+                kind: AppBridge.can-install ? 1 : 0;
+                enabled: AppBridge.can-check;
+                clicked => {
+                    AppBridge.check-updates();
+                }
+            }
+            if AppBridge.can-install: AppButton {
+                text: "Update installieren";
+                icon: Icons.download;
+                kind: 0;
+                clicked => {
+                    AppBridge.page = 1;
+                    AppBridge.start-upgrade();
+                }
+            }
+            if AppBridge.checking: AppButton {
+                text: "Abbrechen";
+                icon: Icons.stop;
+                kind: 2;
+                clicked => {
+                    AppBridge.cancel-operation();
+                }
+            }
+            if AppBridge.session-active: AppButton {
+                text: "Zum laufenden Update";
+                kind: 0;
+                clicked => {
+                    AppBridge.page = 1;
+                }
+            }
+        }
+    }
+}
+
+component NewsCard inherits Card {
+    VerticalLayout {
+        padding: 18px;
+        spacing: 10px;
+        HorizontalLayout {
+            spacing: 10px;
+            Icon {
+                name: Icons.news;
+                color: Theme.accent;
+            }
+            SectionTitle {
+                text: "Arch-News";
+                horizontal-stretch: 1;
+            }
+            AppButton {
+                text: AppBridge.news-loading ? "Wird geladen …" : "News abrufen";
+                enabled: !AppBridge.news-loading;
+                kind: 2;
+                icon: Icons.refresh;
+                clicked => {
+                    AppBridge.load-news();
+                }
+            }
+            AppButton {
+                text: "Im Browser öffnen";
+                kind: 2;
+                clicked => {
+                    AppBridge.open-news-web();
+                }
+            }
+        }
+        Muted {
+            text: AppBridge.news-status + " – Vor jedem Update empfiehlt arch-update, aktuelle News zu lesen. Beim Update-Lauf zeigt arch-update neue Meldungen selbst an.";
+        }
+        for item in AppBridge.news: HorizontalLayout {
+            spacing: 10px;
+            Text {
+                text: item.index + ".";
+                color: Theme.text-muted;
+                width: 22px;
+            }
+            Text {
+                text: item.title;
+                color: Theme.text;
+                wrap: word-wrap;
+                horizontal-stretch: 1;
+            }
+        }
+    }
+}
+
+export component DashboardPage inherits ScrollView {
+    VerticalLayout {
+        padding: 28px;
+        spacing: 18px;
+        alignment: start;
+
+        VerticalLayout {
+            spacing: 2px;
+            Text {
+                text: "Übersicht";
+                color: Theme.text;
+                font-size: Theme.font-title;
+                font-weight: 800;
+            }
+            Text {
+                text: "Status von cachy-update (arch-update) auf diesem System";
+                color: Theme.text-muted;
+            }
+        }
+
+        StatusHero { }
+
+        if AppBridge.external-running && !AppBridge.session-active: Banner {
+            tone: 2;
+            title: "Eine andere arch-update-Instanz läuft";
+            text: "Die Sperrdatei /tmp/arch-update.lock ist belegt (z. B. Update im Terminal). Die Installation über die GUI ist bis zum Ende dieses Laufs gesperrt.";
+        }
+
+        if AppBridge.error-visible: ErrorBanner {
+            title: AppBridge.error-title;
+            summary: AppBridge.error-summary;
+            details: AppBridge.error-details;
+            dismiss => {
+                AppBridge.dismiss-error();
+            }
+            copy => {
+                AppBridge.copy-error();
+            }
+        }
+
+        GridLayout {
+            spacing: 16px;
+            Row {
+                StatCard {
+                    icon: Icons.package;
+                    label: "Installiert";
+                    value: AppBridge.tool-version;
+                    note: AppBridge.tool-package;
+                }
+                StatCard {
+                    icon: Icons.download;
+                    icon-tone: AppBridge.pending-total > 0 ? 2 : 1;
+                    label: "Verfügbare Updates";
+                    value: AppBridge.pending-total == 0 ? "Keine bekannt" : AppBridge.pending-total + " Update(s)";
+                    note: "Pakete " + AppBridge.pending-pacman + " · AUR " + AppBridge.pending-aur + " · Flatpak " + AppBridge.pending-flatpak;
+                }
+                StatCard {
+                    icon: Icons.clock;
+                    label: "Letzte Update-Prüfung";
+                    value: AppBridge.last-check;
+                    note: AppBridge.last-check-note;
+                }
+            }
+            Row {
+                StatCard {
+                    icon: Icons.flag;
+                    icon-tone: AppBridge.last-install-tone;
+                    label: "Letzte Installation (über diese App)";
+                    value: AppBridge.last-install;
+                    note: AppBridge.last-install-note;
+                    note-tone: AppBridge.last-install-tone;
+                }
+                StatCard {
+                    icon: Icons.check;
+                    label: "Letzte pacman-Transaktion";
+                    value: AppBridge.last-transaction;
+                    note: "Letzter bestätigter arch-update-Lauf: " + AppBridge.last-update-run;
+                }
+                StatCard {
+                    icon: Icons.reboot;
+                    icon-tone: AppBridge.reboot-tone;
+                    label: "Neustart";
+                    value: AppBridge.reboot-text;
+                    note: "Laufender Kernel: " + AppBridge.kernel-version;
+                }
+            }
+            Row {
+                StatCard {
+                    icon: Icons.clock;
+                    label: "Automatische Prüfung";
+                    value: AppBridge.timer-text;
+                    note: "systemd-User-Timer von cachy-update; änderbar unter Einstellungen.";
+                }
+                NewsCard {
+                    colspan: 2;
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,391 @@
+import { ScrollView, Switch, CheckBox, SpinBox, ComboBox } from "std-widgets.slint";
+import { Theme, Icon, Icons } from "../theme.slint";
+import { AppBridge } from "../bridge.slint";
+import { AppButton, Card, SectionTitle, Muted, Banner } from "../components/controls.slint";
+
+component SettingsCard inherits Card {
+    in property <string> title;
+    in property <string> subtitle;
+    in property <string> icon;
+    VerticalLayout {
+        padding: 20px;
+        spacing: 12px;
+        HorizontalLayout {
+            spacing: 10px;
+            Icon {
+                name: root.icon;
+                color: Theme.accent;
+            }
+            SectionTitle {
+                text: root.title;
+            }
+        }
+        if root.subtitle != "": Muted {
+            text: root.subtitle;
+        }
+        @children
+    }
+}
+
+component SettingRow inherits HorizontalLayout {
+    in property <string> label;
+    in property <string> hint;
+    spacing: 16px;
+    VerticalLayout {
+        horizontal-stretch: 1;
+        alignment: center;
+        Text {
+            text: root.label;
+            color: Theme.text;
+            wrap: word-wrap;
+        }
+        if root.hint != "": Muted {
+            text: root.hint;
+        }
+    }
+    @children
+}
+
+export component SettingsPage inherits ScrollView {
+    VerticalLayout {
+        padding: 28px;
+        spacing: 18px;
+        alignment: start;
+
+        VerticalLayout {
+            spacing: 2px;
+            Text {
+                text: "Einstellungen";
+                color: Theme.text;
+                font-size: Theme.font-title;
+                font-weight: 800;
+            }
+            Text {
+                text: "Nur Optionen, die diese App bzw. cachy-update tatsächlich unterstützen";
+                color: Theme.text-muted;
+            }
+        }
+
+        if AppBridge.settings-notice != "": Banner {
+            tone: 4;
+            title: AppBridge.settings-notice;
+        }
+
+        SettingsCard {
+            title: "Darstellung und Verhalten";
+            icon: Icons.gear;
+            subtitle: "Gespeichert in " + AppBridge.settings-path + " (Änderungen werden sofort übernommen).";
+            SettingRow {
+                label: "Dunkles Design";
+                hint: "Standard. Deaktivieren für das helle Design.";
+                Switch {
+                    checked <=> AppBridge.dark-theme;
+                    accessible-label: "Dunkles Design";
+                    toggled => {
+                        AppBridge.settings-changed();
+                    }
+                }
+            }
+            SettingRow {
+                label: "Beim Start nach Updates suchen";
+                hint: "Führt „arch-update --check“ aus (Netzwerkzugriff, ggf. Desktop-Benachrichtigung).";
+                Switch {
+                    checked <=> AppBridge.set-check-on-startup;
+                    accessible-label: "Beim Start nach Updates suchen";
+                    toggled => {
+                        AppBridge.settings-changed();
+                    }
+                }
+            }
+            SettingRow {
+                label: "Status nach einem Update neu einlesen";
+                hint: "Liest die Statusdateien von arch-update und pacman.log nach jedem Update-Lauf erneut ein.";
+                Switch {
+                    checked <=> AppBridge.set-refresh-after;
+                    accessible-label: "Status nach einem Update neu einlesen";
+                    toggled => {
+                        AppBridge.settings-changed();
+                    }
+                }
+            }
+            SettingRow {
+                label: "AUR-Entwicklungspakete einbeziehen";
+                hint: "Startet das Update mit „arch-update --devel“ (nur mit AUR-Helper wirksam).";
+                Switch {
+                    checked <=> AppBridge.set-include-devel;
+                    accessible-label: "AUR-Entwicklungspakete einbeziehen";
+                    toggled => {
+                        AppBridge.settings-changed();
+                    }
+                }
+            }
+        }
+
+        SettingsCard {
+            title: "Protokoll";
+            icon: Icons.list;
+            SettingRow {
+                label: "Maximale Einträge im Speicher";
+                hint: "Ältere Einträge werden aus der Ansicht entfernt (Logdatei bleibt erhalten).";
+                SpinBox {
+                    width: 140px;
+                    minimum: 200;
+                    maximum: 100000;
+                    step-size: 500;
+                    value <=> AppBridge.set-max-entries;
+                    edited => {
+                        AppBridge.settings-changed();
+                    }
+                }
+            }
+            SettingRow {
+                label: "Protokoll in Datei schreiben";
+                hint: "Unter $XDG_STATE_HOME/cashy-updater-gui/logs/.";
+                Switch {
+                    checked <=> AppBridge.set-write-log;
+                    accessible-label: "Protokoll in Datei schreiben";
+                    toggled => {
+                        AppBridge.settings-changed();
+                    }
+                }
+            }
+            SettingRow {
+                label: "Debug-Meldungen erfassen";
+                hint: "Wird beim nächsten Start wirksam.";
+                Switch {
+                    checked <=> AppBridge.set-debug-log;
+                    accessible-label: "Debug-Meldungen erfassen";
+                    toggled => {
+                        AppBridge.settings-changed();
+                    }
+                }
+            }
+        }
+
+        SettingsCard {
+            title: "Automatische Update-Prüfung";
+            icon: Icons.clock;
+            subtitle: "systemd-User-Timer „arch-update.timer“ aus dem cachy-update-Paket: Prüfung 2 Minuten nach dem Start und danach täglich. Aktivieren nutzt „arch-update --check --enable“.";
+            SettingRow {
+                label: "Täglich automatisch prüfen";
+                hint: AppBridge.timer-known ? "" : "Status des Timers konnte nicht ermittelt werden.";
+                Switch {
+                    enabled: AppBridge.timer-known;
+                    checked <=> AppBridge.timer-enabled;
+                    accessible-label: "Täglich automatisch prüfen";
+                    toggled => {
+                        AppBridge.set-timer(self.checked);
+                    }
+                }
+            }
+        }
+
+        SettingsCard {
+            title: "cachy-update-Konfiguration";
+            icon: Icons.package;
+            subtitle: "Datei: " + AppBridge.conf-path + " – Es werden nur die in arch-update.conf(5) dokumentierten Optionen angeboten. Kommentare bleiben erhalten.";
+
+            if !AppBridge.conf-exists: VerticalLayout {
+                spacing: 10px;
+                Muted {
+                    text: "Es existiert noch keine arch-update.conf; cachy-update verwendet seine Standardwerte.";
+                }
+                HorizontalLayout {
+                    alignment: start;
+                    AppButton {
+                        text: "Konfiguration erzeugen (arch-update --gen-config)";
+                        kind: 0;
+                        clicked => {
+                            AppBridge.conf-generate();
+                        }
+                    }
+                }
+            }
+
+            if AppBridge.conf-exists: VerticalLayout {
+                spacing: 12px;
+                GridLayout {
+                    spacing-horizontal: 24px;
+                    spacing-vertical: 8px;
+                    Row {
+                        CheckBox {
+                            text: "Keine Versionsnummern (NoVersion)";
+                            checked <=> AppBridge.conf-no-version;
+                        }
+                        CheckBox {
+                            text: "AUR-Unterstützung aus (NoAUR)";
+                            checked <=> AppBridge.conf-no-aur;
+                        }
+                    }
+                    Row {
+                        CheckBox {
+                            text: "Flatpak-Unterstützung aus (NoFlatpak)";
+                            checked <=> AppBridge.conf-no-flatpak;
+                        }
+                        CheckBox {
+                            text: "Keine Desktop-Benachrichtigung (NoNotification)";
+                            checked <=> AppBridge.conf-no-notification;
+                        }
+                    }
+                    Row {
+                        CheckBox {
+                            text: "Keine ALHP-Prüfung (NoALHPCheck)";
+                            checked <=> AppBridge.conf-no-alhp;
+                        }
+                        CheckBox {
+                            text: "Keine Farben im Terminal (NoColor)";
+                            checked <=> AppBridge.conf-no-color;
+                        }
+                    }
+                    Row {
+                        CheckBox {
+                            text: "Tray nur bei Updates zeigen (ShowTrayWhenRelevant)";
+                            checked <=> AppBridge.conf-show-tray-relevant;
+                        }
+                        CheckBox {
+                            text: "Farbenblind-Modus für Tray-Icons (ColorblindMode)";
+                            checked <=> AppBridge.conf-colorblind;
+                        }
+                    }
+                }
+                SettingRow {
+                    label: "Anzahl angezeigter News (NewsNum)";
+                    SpinBox {
+                        width: 140px;
+                        minimum: 1;
+                        maximum: 50;
+                        value <=> AppBridge.conf-news-num;
+                    }
+                }
+                SettingRow {
+                    label: "Zeitlimit News-Abruf in s (NewsTimeout)";
+                    SpinBox {
+                        width: 140px;
+                        minimum: 0;
+                        maximum: 600;
+                        value <=> AppBridge.conf-news-timeout;
+                    }
+                }
+                SettingRow {
+                    label: "Zeitlimit Update-Prüfung in s (UpdateCheckTimeout)";
+                    SpinBox {
+                        width: 140px;
+                        minimum: 0;
+                        maximum: 600;
+                        value <=> AppBridge.conf-check-timeout;
+                    }
+                }
+                SettingRow {
+                    label: "Alte Paketversionen im Cache behalten (KeepOldPackages)";
+                    SpinBox {
+                        width: 140px;
+                        minimum: 0;
+                        maximum: 50;
+                        value <=> AppBridge.conf-keep-old;
+                    }
+                }
+                SettingRow {
+                    label: "Deinstallierte Pakete im Cache behalten (KeepUninstalledPackages)";
+                    SpinBox {
+                        width: 140px;
+                        minimum: 0;
+                        maximum: 50;
+                        value <=> AppBridge.conf-keep-uninstalled;
+                    }
+                }
+                SettingRow {
+                    label: "Updates pro Seite im Tray (TrayUpdatesPerPage, 0 = alle)";
+                    SpinBox {
+                        width: 140px;
+                        minimum: 0;
+                        maximum: 500;
+                        value <=> AppBridge.conf-tray-per-page;
+                    }
+                }
+                SettingRow {
+                    label: "AUR-Helper (AURHelper)";
+                    ComboBox {
+                        width: 180px;
+                        model: ["Automatisch", "paru", "yay", "pikaur"];
+                        current-value <=> AppBridge.conf-aur-helper;
+                    }
+                }
+                SettingRow {
+                    label: "Rechteerhöhung (PrivilegeElevationCommand)";
+                    ComboBox {
+                        width: 180px;
+                        model: ["Automatisch", "sudo", "sudo-rs", "doas", "run0"];
+                        current-value <=> AppBridge.conf-su-cmd;
+                    }
+                }
+                SettingRow {
+                    label: "Tray-Icon-Stil (TrayIconStyle)";
+                    ComboBox {
+                        width: 180px;
+                        model: ["blue", "light", "dark"];
+                        current-value <=> AppBridge.conf-tray-style;
+                    }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    AppButton {
+                        text: "Speichern";
+                        kind: 0;
+                        enabled: !AppBridge.session-active;
+                        clicked => {
+                            AppBridge.conf-save();
+                        }
+                    }
+                    AppButton {
+                        text: "Neu laden";
+                        kind: 2;
+                        clicked => {
+                            AppBridge.conf-reload();
+                        }
+                    }
+                }
+                Muted {
+                    text: "DiffProg wird hier bewusst nicht angeboten (frei ausführbarer Befehl; die pacnew-Verarbeitung ist in cachy-update deaktiviert).";
+                }
+            }
+            if AppBridge.conf-notice != "": Text {
+                text: AppBridge.conf-notice;
+                color: Theme.text-muted;
+                wrap: word-wrap;
+            }
+        }
+
+        SettingsCard {
+            title: "Version und Diagnose";
+            icon: Icons.info;
+            for row in AppBridge.diagnostics: HorizontalLayout {
+                spacing: 16px;
+                Text {
+                    text: row.label;
+                    color: Theme.text-muted;
+                    width: 220px;
+                    wrap: word-wrap;
+                }
+                Text {
+                    text: row.value;
+                    color: Theme.text;
+                    font-family: "monospace";
+                    font-size: 12px;
+                    wrap: word-wrap;
+                    horizontal-stretch: 1;
+                }
+            }
+            HorizontalLayout {
+                alignment: start;
+                AppButton {
+                    text: "Diagnose kopieren";
+                    icon: Icons.copy;
+                    clicked => {
+                        AppBridge.copy-diagnostics();
+                    }
+                }
+            }
+        }
+    }
+}

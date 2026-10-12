@@ -1,0 +1,196 @@
+// Schnittstelle zwischen Rust (src/ui/bridge.rs) und der Oberfläche.
+// Rust setzt die Eigenschaften; Callbacks lösen Aktionen im Controller aus.
+
+export struct PackageRow {
+    source: string,
+    name: string,
+    current: string,
+    available: string,
+}
+
+// status: 0 ausstehend, 1 aktiv, 2 erledigt, 3 fehlgeschlagen, 4 nicht beobachtet
+export struct StepRow {
+    title: string,
+    status: int,
+}
+
+// level: 0 Debug, 1 Info, 2 Warnung, 3 Fehler
+export struct LogRow {
+    id: int,
+    time: string,
+    level: int,
+    level-text: string,
+    source: string,
+    message: string,
+    selected: bool,
+}
+
+export struct NewsRow {
+    index: int,
+    title: string,
+}
+
+export struct InfoRow {
+    label: string,
+    value: string,
+}
+
+export global AppBridge {
+    // Navigation: 0 Übersicht, 1 Updates, 2 Protokoll, 3 Einstellungen
+    in-out property <int> page: 0;
+
+    // ---- Status / Dashboard
+    in property <string> state-title: "Wird geladen …";
+    in property <string> state-description;
+    in property <int> state-tone: 0;
+    in property <string> tool-version: "Wird ermittelt …";
+    in property <string> tool-package;
+    in property <string> kernel-version;
+    in property <string> self-update;
+    in property <int> pending-total;
+    in property <int> pending-pacman;
+    in property <int> pending-aur;
+    in property <int> pending-flatpak;
+    in property <string> last-check;
+    in property <string> last-check-note;
+    in property <string> last-install;
+    in property <string> last-install-note;
+    in property <int> last-install-tone;
+    in property <string> last-update-run;
+    in property <string> last-transaction;
+    in property <string> reboot-text;
+    in property <int> reboot-tone;
+    in property <string> timer-text;
+    in property <bool> external-running;
+
+    // ---- Aktionen erlaubt?
+    in property <bool> busy;
+    in property <bool> checking;
+    in property <bool> session-active;
+    in property <bool> can-check;
+    in property <bool> can-install;
+    in property <bool> can-cancel;
+    in property <bool> can-open-terminal;
+
+    // ---- Update-Ansicht
+    in property <[PackageRow]> packages;
+    in property <[StepRow]> steps;
+    in property <string> phase-text;
+    in property <string> activity;
+    in property <bool> progress-visible;
+    in property <bool> progress-known;
+    in property <float> progress;
+    in property <string> progress-text;
+    in property <string> terminal-text;
+    in property <int> terminal-revision;
+    // prompt-kind: 0 keine, 1 Ja/Nein, 2 Passwort, 3 Enter, 4 Auswahl, 5 freie Eingabe
+    in property <int> prompt-kind;
+    in property <string> prompt-text;
+    in property <bool> prompt-default-yes;
+    in property <bool> include-devel;
+
+    // ---- Ergebnis / Fehler
+    in property <bool> result-visible;
+    in property <string> result-title;
+    in property <string> result-text;
+    in property <int> result-tone;
+    in property <bool> error-visible;
+    in property <string> error-title;
+    in property <string> error-summary;
+    in property <string> error-details;
+
+    // ---- News
+    in property <[NewsRow]> news;
+    in property <string> news-status;
+    in property <bool> news-loading;
+
+    // ---- Protokoll
+    in property <[LogRow]> log-rows;
+    in property <int> log-revision;
+    in property <string> log-info;
+    in property <bool> log-has-more;
+    in property <string> log-file;
+    in-out property <bool> log-show-debug: false;
+    in-out property <bool> log-show-info: true;
+    in-out property <bool> log-show-warn: true;
+    in-out property <bool> log-show-error: true;
+    in-out property <string> log-query;
+    in-out property <bool> log-follow: true;
+
+    // ---- Einstellungen (GUI)
+    in-out property <bool> dark-theme: true;
+    in-out property <bool> set-check-on-startup;
+    in-out property <bool> set-refresh-after;
+    in-out property <bool> set-include-devel;
+    in-out property <bool> set-debug-log;
+    in-out property <bool> set-write-log;
+    in-out property <int> set-max-entries: 5000;
+    in property <string> settings-path;
+    in property <string> settings-notice;
+
+    // ---- System (arch-update.timer)
+    in property <bool> timer-known;
+    in-out property <bool> timer-enabled;
+
+    // ---- arch-update.conf
+    in property <bool> conf-exists;
+    in property <string> conf-path;
+    in property <string> conf-notice;
+    in-out property <bool> conf-no-version;
+    in-out property <bool> conf-no-aur;
+    in-out property <bool> conf-no-flatpak;
+    in-out property <bool> conf-no-notification;
+    in-out property <bool> conf-no-alhp;
+    in-out property <bool> conf-no-color;
+    in-out property <bool> conf-show-tray-relevant;
+    in-out property <bool> conf-colorblind;
+    in-out property <int> conf-news-num: 5;
+    in-out property <int> conf-news-timeout: 10;
+    in-out property <int> conf-check-timeout: 30;
+    in-out property <int> conf-keep-old: 3;
+    in-out property <int> conf-keep-uninstalled: 0;
+    in-out property <int> conf-tray-per-page: 0;
+    in-out property <string> conf-aur-helper: "Automatisch";
+    in-out property <string> conf-su-cmd: "Automatisch";
+    in-out property <string> conf-tray-style: "blue";
+
+    // ---- Diagnose
+    in property <[InfoRow]> diagnostics;
+
+    // ---- Overlays
+    in property <string> toast-text;
+    in property <int> toast-tone;
+    in-out property <bool> close-dialog-visible;
+    in property <bool> close-dialog-can-cancel;
+
+    // ---- Callbacks
+    callback check-updates();
+    callback start-upgrade();
+    callback cancel-operation();
+    callback open-terminal();
+    callback refresh-status();
+    callback send-input(string);
+    callback answer(string);
+    callback load-news();
+    callback open-news-web();
+    callback dismiss-error();
+    callback copy-error();
+
+    callback log-filter-changed();
+    callback log-toggle-select(int);
+    callback log-select-all();
+    callback log-copy-selected();
+    callback log-export();
+    callback log-clear-view();
+    callback log-load-more();
+    callback open-log-folder();
+
+    callback settings-changed();
+    callback set-timer(bool);
+    callback conf-save();
+    callback conf-generate();
+    callback conf-reload();
+    callback copy-diagnostics();
+
+    callback close-cancel-and-quit();
+}

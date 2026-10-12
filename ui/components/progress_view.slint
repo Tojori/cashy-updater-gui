@@ -1,0 +1,218 @@
+import { LineEdit } from "std-widgets.slint";
+import { Theme, Icon, Icons } from "../theme.slint";
+import { AppBridge, StepRow } from "../bridge.slint";
+import { AppButton, Card, Muted, SectionTitle } from "controls.slint";
+
+component StepItem inherits HorizontalLayout {
+    in property <StepRow> step;
+    in property <int> number;
+    in property <bool> last;
+    spacing: 10px;
+
+    property <color> step-color: step.status == 2 ? Theme.success
+        : step.status == 1 ? Theme.accent
+        : step.status == 3 ? Theme.danger
+        : Theme.text-muted;
+
+    Rectangle {
+        width: 30px;
+        height: 30px;
+        y: (parent.height - self.height) / 2;
+        border-radius: 15px;
+        background: root.step.status == 0 || root.step.status == 4 ? transparent : root.step-color.with-alpha(0.18);
+        border-width: 2px;
+        border-color: root.step.status == 4 ? Theme.border : root.step-color;
+        if root.step.status == 2: Icon {
+            name: Icons.check;
+            color: root.step-color;
+            size: 16px;
+        }
+        if root.step.status == 3: Icon {
+            name: Icons.error;
+            color: root.step-color;
+            size: 16px;
+        }
+        if root.step.status == 0 || root.step.status == 1: Text {
+            text: root.number;
+            color: root.step-color;
+            font-weight: 700;
+            font-size: 12px;
+        }
+        if root.step.status == 4: Text {
+            text: "–";
+            color: Theme.text-muted;
+            font-weight: 700;
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        Text {
+            text: root.step.title;
+            color: root.step.status == 0 || root.step.status == 4 ? Theme.text-muted : Theme.text;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        Text {
+            text: root.step.status == 1 ? "läuft" : root.step.status == 2 ? "erledigt" : root.step.status == 3 ? "fehlgeschlagen" : root.step.status == 4 ? "nicht beobachtet" : "ausstehend";
+            color: root.step.status == 0 || root.step.status == 4 ? Theme.text-muted : root.step-color;
+            font-size: 11px;
+        }
+    }
+    if !root.last: Rectangle {
+        horizontal-stretch: 1;
+        min-width: 12px;
+        height: 2px;
+        y: (parent.height - self.height) / 2;
+        background: root.step.status == 2 ? Theme.success.with-alpha(0.6) : Theme.border;
+    }
+}
+
+// Ablauf: Update-Prüfung → Download → Integritätsprüfung → Installation → Abschluss
+export component StepsBar inherits Card {
+    accessible-role: list;
+    accessible-label: "Update-Ablauf";
+    HorizontalLayout {
+        padding: 16px;
+        spacing: 10px;
+        for step[i] in AppBridge.steps: StepItem {
+            step: step;
+            number: i + 1;
+            last: i == AppBridge.steps.length - 1;
+            horizontal-stretch: i == AppBridge.steps.length - 1 ? 0 : 1;
+        }
+    }
+}
+
+// Fortschrittsbalken in Theme-Farbe; unbestimmt = wandernder Abschnitt.
+export component ProgressBar inherits Rectangle {
+    in property <float> progress;
+    in property <bool> indeterminate;
+    height: 8px;
+    border-radius: 4px;
+    background: Theme.surface-2;
+    clip: true;
+    accessible-role: progress-indicator;
+    accessible-value: root.indeterminate ? "" : Math.round(root.progress * 100) + " %";
+    property <float> phase: Math.mod(animation-tick() / 1.6s, 1.0);
+    Rectangle {
+        border-radius: 4px;
+        background: Theme.accent;
+        width: root.indeterminate ? parent.width * 0.3 : parent.width * Math.clamp(root.progress, 0, 1);
+        x: root.indeterminate ? (root.phase * 1.3 - 0.3) * parent.width : 0;
+        animate width { duration: 200ms; }
+    }
+}
+
+export component ProgressPanel inherits Card {
+    VerticalLayout {
+        padding: 18px;
+        spacing: 10px;
+        HorizontalLayout {
+            spacing: 10px;
+            SectionTitle {
+                text: AppBridge.phase-text;
+                horizontal-stretch: 1;
+            }
+            if AppBridge.progress-known && AppBridge.progress-visible: Text {
+                text: AppBridge.progress-text;
+                color: Theme.text-muted;
+                vertical-alignment: center;
+            }
+        }
+        if AppBridge.progress-visible: ProgressBar {
+            indeterminate: !AppBridge.progress-known;
+            progress: AppBridge.progress;
+            accessible-label: "Fortschritt";
+        }
+        Text {
+            text: AppBridge.activity;
+            color: Theme.text-muted;
+            font-family: "monospace";
+            font-size: 12px;
+            overflow: elide;
+        }
+    }
+}
+
+// Eingabebereich für Abfragen von arch-update (Bestätigung, Passwort, Auswahl).
+export component PromptPanel inherits Card {
+    in-out property <string> input-text;
+    border-color: AppBridge.prompt-kind != 0 ? Theme.accent : Theme.border;
+    border-width: AppBridge.prompt-kind != 0 ? 2px : 1px;
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 10px;
+        HorizontalLayout {
+            spacing: 10px;
+            Icon {
+                name: AppBridge.prompt-kind == 2 ? Icons.shield : Icons.terminal;
+                color: AppBridge.prompt-kind != 0 ? Theme.accent : Theme.text-muted;
+            }
+            Text {
+                text: AppBridge.prompt-kind != 0 ? AppBridge.prompt-text : "Keine Eingabe angefordert – arch-update arbeitet.";
+                color: AppBridge.prompt-kind != 0 ? Theme.text : Theme.text-muted;
+                font-weight: AppBridge.prompt-kind != 0 ? 700 : 400;
+                wrap: word-wrap;
+                horizontal-stretch: 1;
+            }
+        }
+        if AppBridge.prompt-kind == 2: Muted {
+            text: "Das Passwort wird direkt an das Programm zur Rechteerhöhung (sudo/doas/run0) übergeben und weder gespeichert noch protokolliert.";
+        }
+        HorizontalLayout {
+            spacing: 8px;
+            if AppBridge.prompt-kind == 1: AppButton {
+                text: "Ja";
+                kind: AppBridge.prompt-default-yes ? 0 : 1;
+                clicked => {
+                    AppBridge.answer("y");
+                }
+            }
+            if AppBridge.prompt-kind == 1: AppButton {
+                text: "Nein";
+                kind: AppBridge.prompt-default-yes ? 1 : 0;
+                clicked => {
+                    AppBridge.answer("n");
+                }
+            }
+            if AppBridge.prompt-kind == 3 || AppBridge.prompt-kind == 4: AppButton {
+                text: "Weiter (Enter)";
+                kind: 0;
+                clicked => {
+                    AppBridge.answer("");
+                }
+            }
+            input := LineEdit {
+                horizontal-stretch: 1;
+                enabled: AppBridge.session-active;
+                input-type: AppBridge.prompt-kind == 2 ? InputType.password : InputType.text;
+                placeholder-text: AppBridge.prompt-kind == 2 ? "Passwort eingeben und mit Enter bestätigen" : "Eingabe an arch-update (Enter zum Senden)";
+                text <=> root.input-text;
+                accepted(text) => {
+                    AppBridge.send-input(text);
+                    root.input-text = "";
+                }
+            }
+            AppButton {
+                text: "Senden";
+                enabled: AppBridge.session-active;
+                clicked => {
+                    AppBridge.send-input(root.input-text);
+                    root.input-text = "";
+                }
+            }
+        }
+    }
+
+    // Bei einer Passwortabfrage den Fokus direkt in das Eingabefeld setzen.
+    property <int> kind: AppBridge.prompt-kind;
+    changed kind => {
+        if (self.kind == 2) {
+            input.focus();
+        }
+    }
+    public function focus-input() {
+        input.focus();
+    }
+}

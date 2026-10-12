@@ -1,0 +1,277 @@
+// Grundlegende Bedienelemente mit sichtbarem Fokus und Tastaturbedienung.
+
+import { Theme, Icon, Icons } from "../theme.slint";
+
+// kind: 0 primär, 1 sekundär, 2 dezent, 3 gefährlich
+export component AppButton inherits Rectangle {
+    in property <string> text;
+    in property <string> icon;
+    in property <int> kind: 1;
+    in property <bool> enabled: true;
+    callback clicked();
+
+    property <color> fg: !enabled ? Theme.text-muted.with-alpha(0.6)
+        : kind == 0 ? Theme.on-accent
+        : kind == 3 ? Theme.danger
+        : Theme.text;
+    property <color> base: kind == 0 ? Theme.accent
+        : kind == 2 ? transparent
+        : Theme.surface-2;
+
+    accessible-role: button;
+    accessible-label: root.text;
+    accessible-enabled: root.enabled;
+    accessible-action-default => {
+        if (root.enabled) {
+            root.clicked();
+        }
+    }
+
+    height: 36px;
+    min-width: layout.preferred-width;
+    border-radius: Theme.radius-sm;
+    background: !enabled ? (kind == 0 ? Theme.surface-2 : base)
+        : ta.pressed ? (kind == 0 ? Theme.accent-hover.darker(0.1) : Theme.surface-hover.darker(0.1))
+        : ta.has-hover ? (kind == 0 ? Theme.accent-hover : Theme.surface-hover)
+        : base;
+    border-width: kind == 1 ? 1px : 0px;
+    border-color: Theme.border;
+    opacity: enabled ? 1.0 : 0.75;
+
+    layout := HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        spacing: 8px;
+        alignment: center;
+        if root.icon != "": Icon {
+            name: root.icon;
+            color: root.fg;
+            size: 16px;
+        }
+        Text {
+            text: root.text;
+            color: root.fg;
+            vertical-alignment: center;
+            font-weight: 600;
+        }
+    }
+
+    fs := FocusScope {
+        enabled: root.enabled;
+        key-pressed(event) => {
+            if (event.text == Key.Return || event.text == " ") {
+                root.clicked();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => {
+            root.clicked();
+        }
+    }
+
+    // Fokusring
+    Rectangle {
+        x: -3px;
+        y: -3px;
+        width: parent.width + 6px;
+        height: parent.height + 6px;
+        border-radius: Theme.radius-sm + 3px;
+        border-width: fs.has-focus ? 2px : 0px;
+        border-color: Theme.focus;
+    }
+}
+
+export component Card inherits Rectangle {
+    // Karten wachsen nur, wenn das Layout es ausdrücklich verlangt.
+    vertical-stretch: 0;
+    background: Theme.surface;
+    border-radius: Theme.radius;
+    border-width: 1px;
+    border-color: Theme.border;
+    drop-shadow-blur: 14px;
+    drop-shadow-offset-y: 3px;
+    drop-shadow-color: Theme.shadow;
+}
+
+export component SectionTitle inherits Text {
+    color: Theme.text;
+    font-size: Theme.font-h2;
+    font-weight: 700;
+    vertical-alignment: center;
+}
+
+export component Muted inherits Text {
+    color: Theme.text-muted;
+    font-size: Theme.font-small;
+    wrap: word-wrap;
+}
+
+export component ToneDot inherits Rectangle {
+    in property <int> tone;
+    width: 10px;
+    height: 10px;
+    border-radius: 5px;
+    background: Theme.tone-color(tone);
+}
+
+export component Badge inherits Rectangle {
+    in property <string> text;
+    in property <int> tone: 4;
+    height: 22px;
+    min-width: label.preferred-width + 16px;
+    border-radius: 11px;
+    background: Theme.tone-color(tone).with-alpha(0.16);
+    label := Text {
+        text: root.text;
+        color: Theme.tone-color(root.tone);
+        font-size: Theme.font-small;
+        font-weight: 700;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+// Hinweisleiste (tone: 2 Warnung, 4 Info, 1 Erfolg, 3 Fehler)
+export component Banner inherits Rectangle {
+    in property <string> title;
+    in property <string> text;
+    in property <int> tone: 4;
+    vertical-stretch: 0;
+    border-radius: Theme.radius-sm;
+    background: Theme.tone-color(tone).with-alpha(0.12);
+    border-width: 1px;
+    border-color: Theme.tone-color(tone).with-alpha(0.45);
+    HorizontalLayout {
+        padding: 12px;
+        spacing: 12px;
+        VerticalLayout {
+            alignment: start;
+            Icon {
+                name: root.tone == 3 ? Icons.error : root.tone == 2 ? Icons.warning : root.tone == 1 ? Icons.check : Icons.info;
+                color: Theme.tone-color(root.tone);
+                size: 20px;
+            }
+        }
+        VerticalLayout {
+            spacing: 2px;
+            Text {
+                text: root.title;
+                color: Theme.text;
+                font-weight: 700;
+                wrap: word-wrap;
+            }
+            if root.text != "": Text {
+                text: root.text;
+                color: Theme.text-muted;
+                wrap: word-wrap;
+            }
+        }
+    }
+}
+
+// Fehleranzeige mit aufklappbaren technischen Details.
+export component ErrorBanner inherits Rectangle {
+    in property <string> title;
+    in property <string> summary;
+    in property <string> details;
+    in-out property <bool> expanded: false;
+    callback dismiss();
+    callback copy();
+    vertical-stretch: 0;
+
+    border-radius: Theme.radius-sm;
+    background: Theme.danger.with-alpha(0.10);
+    border-width: 1px;
+    border-color: Theme.danger.with-alpha(0.5);
+    accessible-role: groupbox;
+    accessible-label: "Fehler: " + root.title;
+
+    VerticalLayout {
+        padding: 14px;
+        spacing: 10px;
+        HorizontalLayout {
+            spacing: 12px;
+            VerticalLayout {
+                alignment: start;
+                Icon {
+                    name: Icons.error;
+                    color: Theme.danger;
+                    size: 22px;
+                }
+            }
+            VerticalLayout {
+                spacing: 3px;
+                Text {
+                    text: root.title;
+                    color: Theme.text;
+                    font-weight: 700;
+                    font-size: Theme.font-h2;
+                    wrap: word-wrap;
+                }
+                Text {
+                    text: root.summary;
+                    color: Theme.text-muted;
+                    wrap: word-wrap;
+                }
+            }
+            VerticalLayout {
+                alignment: start;
+                AppButton {
+                    text: "Ausblenden";
+                    kind: 2;
+                    clicked => {
+                        root.dismiss();
+                    }
+                }
+            }
+        }
+        if root.details != "": HorizontalLayout {
+            spacing: 8px;
+            alignment: start;
+            AppButton {
+                text: root.expanded ? "Technische Details ausblenden" : "Technische Details anzeigen";
+                icon: root.expanded ? Icons.chevron-up : Icons.chevron-down;
+                kind: 2;
+                clicked => {
+                    root.expanded = !root.expanded;
+                }
+            }
+            AppButton {
+                text: "Kopieren";
+                icon: Icons.copy;
+                kind: 2;
+                clicked => {
+                    root.copy();
+                }
+            }
+        }
+        if root.expanded && root.details != "": Rectangle {
+            background: Theme.terminal-bg;
+            border-radius: 6px;
+            min-height: 60px;
+            max-height: 220px;
+            preferred-height: min(220px, detail-text.preferred-height + 20px);
+            Flickable {
+                content-height: detail-text.preferred-height + 20px;
+                detail-text := TextInput {
+                    x: 10px;
+                    y: 10px;
+                    width: parent.width - 20px;
+                    text: root.details;
+                    read-only: true;
+                    single-line: false;
+                    wrap: word-wrap;
+                    color: Theme.terminal-text;
+                    font-family: "monospace";
+                    font-size: 12px;
+                }
+            }
+        }
+    }
+}

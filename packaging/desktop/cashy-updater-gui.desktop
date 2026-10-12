@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Cashy Updater
+GenericName=System-Updates
+Comment=Grafische Oberfläche für cachy-update (arch-update)
+Comment[en]=Graphical front end for cachy-update (arch-update)
+Exec=cashy-updater-gui
+Icon=cashy-updater-gui
+Terminal=false
+Categories=System;PackageManager;
+Keywords=update;upgrade;pacman;cachyos;arch;aktualisierung;
+StartupNotify=true
+StartupWMClass=cashy-updater-gui

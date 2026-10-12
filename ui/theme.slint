@@ -1,0 +1,103 @@
+// Designsystem: Farben, Abstände, Typografie und Icons.
+// Dark Mode ist Standard; Light Mode wird über Theme.dark umgeschaltet.
+
+export global Theme {
+    in-out property <bool> dark: true;
+
+    out property <color> bg: dark ? #0f1218 : #f3f5f9;
+    out property <color> sidebar: dark ? #131720 : #ffffff;
+    out property <color> surface: dark ? #1a1f2a : #ffffff;
+    out property <color> surface-2: dark ? #222836 : #eef1f6;
+    out property <color> surface-hover: dark ? #283041 : #e4e8ef;
+    out property <color> border: dark ? #2a3141 : #dce1e9;
+    out property <color> text: dark ? #e8ecf3 : #182030;
+    out property <color> text-muted: dark ? #9aa4b5 : #5a6475;
+    out property <color> accent: dark ? #2cc3d6 : #0b8a9c;
+    out property <color> accent-hover: dark ? #4fd3e3 : #097586;
+    out property <color> on-accent: dark ? #062027 : #ffffff;
+    out property <color> success: dark ? #34d399 : #047857;
+    out property <color> warning: dark ? #fbbf24 : #b45309;
+    out property <color> danger: dark ? #f87171 : #c81e1e;
+    out property <color> focus: dark ? #93e2ee : #075e6b;
+    out property <color> shadow: dark ? #00000080 : #1a20301f;
+    out property <color> terminal-bg: dark ? #0b0e13 : #1b2130;
+    out property <color> terminal-text: #d6dde8;
+
+    out property <length> radius: 12px;
+    out property <length> radius-sm: 8px;
+    out property <length> pad: 20px;
+    out property <length> gap: 16px;
+
+    out property <length> font-small: 12px;
+    out property <length> font-body: 14px;
+    out property <length> font-h2: 16px;
+    out property <length> font-title: 24px;
+
+    // 0 neutral, 1 Erfolg, 2 Warnung, 3 Fehler, 4 beschäftigt
+    public pure function tone-color(tone: int) -> color {
+        if (tone == 1) {
+            return self.success;
+        }
+        if (tone == 2) {
+            return self.warning;
+        }
+        if (tone == 3) {
+            return self.danger;
+        }
+        if (tone == 4) {
+            return self.accent;
+        }
+        return self.text-muted;
+    }
+}
+
+// Einheitliche Linien-Icons (24×24, eigene Pfade).
+export global Icons {
+    out property <string> home: "M3 11 L12 3 L21 11 M5 9.5 L5 21 L19 21 L19 9.5 M10 21 L10 15 L14 15 L14 21";
+    out property <string> refresh: "M20 12 A8 8 0 1 1 17.66 6.34 M20 3.5 L20 8.5 L15 8.5";
+    out property <string> list: "M8 6 L21 6 M8 12 L21 12 M8 18 L21 18 M3.5 6 L4.5 6 M3.5 12 L4.5 12 M3.5 18 L4.5 18";
+    out property <string> gear: "M9 12 A3 3 0 1 0 15 12 A3 3 0 1 0 9 12 M12 2.5 L12 5 M12 19 L12 21.5 M2.5 12 L5 12 M19 12 L21.5 12 M5.3 5.3 L7.1 7.1 M16.9 16.9 L18.7 18.7 M5.3 18.7 L7.1 16.9 M16.9 7.1 L18.7 5.3";
+    out property <string> check: "M5 12.5 L10 17.5 L19 7";
+    out property <string> warning: "M12 3.5 L21.5 20 L2.5 20 Z M12 10 L12 14 M12 16.8 L12 17.2";
+    out property <string> error: "M3 12 A9 9 0 1 0 21 12 A9 9 0 1 0 3 12 M9 9 L15 15 M15 9 L9 15";
+    out property <string> info: "M3 12 A9 9 0 1 0 21 12 A9 9 0 1 0 3 12 M12 11 L12 16.5 M12 7.8 L12 8.2";
+    out property <string> download: "M12 3 L12 15 M7 10 L12 15 L17 10 M4 20 L20 20";
+    out property <string> shield: "M12 3 L20 6 L20 12 C20 16.5 16.5 20 12 21 C7.5 20 4 16.5 4 12 L4 6 Z M8.5 12 L11 14.5 L15.5 9.5";
+    out property <string> package: "M3 7 L12 3 L21 7 L21 17 L12 21 L3 17 Z M3 7 L12 11 L21 7 M12 11 L12 21";
+    out property <string> flag: "M5 21 L5 4 M5 4 L18 4 L15 8 L18 12 L5 12";
+    out property <string> search: "M4 10 A6 6 0 1 0 16 10 A6 6 0 1 0 4 10 M14.5 14.5 L20 20";
+    out property <string> terminal: "M4 6 L9 11 L4 16 M11 17 L20 17";
+    out property <string> copy: "M8 8 L20 8 L20 20 L8 20 Z M4 16 L4 4 L16 4";
+    out property <string> export: "M12 15 L12 3 M7 8 L12 3 L17 8 M4 14 L4 20 L20 20 L20 14";
+    out property <string> trash: "M4 7 L20 7 M9 7 L9 4 L15 4 L15 7 M6 7 L7 20 L17 20 L18 7";
+    out property <string> news: "M4 5 L17 5 L17 19 L6 19 A2 2 0 0 1 4 17 Z M17 9 L20 9 L20 17 A2 2 0 0 1 18 19 M8 9 L13 9 M8 13 L13 13";
+    out property <string> stop: "M3 12 A9 9 0 1 0 21 12 A9 9 0 1 0 3 12 M9 9 L15 9 L15 15 L9 15 Z";
+    out property <string> folder: "M3 6 L9 6 L11 8 L21 8 L21 19 L3 19 Z";
+    out property <string> reboot: "M12 3 L12 11 M7 5.6 A8 8 0 1 0 17 5.6";
+    out property <string> clock: "M3 12 A9 9 0 1 0 21 12 A9 9 0 1 0 3 12 M12 7 L12 12 L15.5 14";
+    out property <string> chevron-down: "M6 9 L12 15 L18 9";
+    out property <string> chevron-up: "M6 15 L12 9 L18 15";
+}
+
+// Das Icon füllt in Layouts die Zeilenhöhe und zentriert den Pfad vertikal.
+export component Icon {
+    in property <string> name;
+    in property <color> color: Theme.text;
+    in property <length> size: 18px;
+    width: size;
+    min-height: size;
+    Path {
+        x: 0;
+        y: (parent.height - root.size) / 2;
+        width: root.size;
+        height: root.size;
+        commands: root.name;
+        stroke: root.color;
+        stroke-width: 1.8px;
+        fill: transparent;
+        viewbox-x: 0;
+        viewbox-y: 0;
+        viewbox-width: 24;
+        viewbox-height: 24;
+    }
+}
