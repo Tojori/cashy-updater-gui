@@ -164,4 +164,7 @@ Die Test-Doubles (`tests/fixtures/bin/`) bilden Ausgabe, Abfragen, Statusdateien
 - Flatpak-Einträge werden so angezeigt, wie arch-update sie speichert (Name und Version in einer Zeile).
 - „Letzte Installation“ bezieht sich auf Läufe über diese App. Für alle anderen Läufe zeigt die Übersicht die letzte pacman-Transaktion und das Datum des letzten Laufs laut arch-update.
 - Das Release-Binary ist mit den Slint-Standardfeatures etwa 31 MB groß.
-- Die Lizenz des Projekts ist noch festzulegen (`license=('unknown')` im PKGBUILD). arch-update selbst steht unter GPL-3.0-or-later.
+
+## Lizenz
+
+GPL-3.0-or-later, wie arch-update. Der vollständige Lizenztext steht in [LICENSE](LICENSE).

@@ -5,8 +5,8 @@ pkgver=0.1.0
 pkgrel=1
 pkgdesc="Grafische Oberfläche für cachy-update (arch-update)"
 arch=('x86_64')
-url="https://github.com/CachyOS/cachy-update"
-license=('unknown')
+url="https://github.com/Tojori/cashy-updater-gui"
+license=('GPL-3.0-or-later')
 depends=('cachy-update' 'gcc-libs' 'glibc' 'fontconfig' 'freetype2' 'libxkbcommon'
          'wayland' 'libglvnd' 'libx11' 'libxcursor' 'libxi' 'libxkbcommon-x11')
 optdepends=('xdg-utils: Logordner und Arch-News im Browser öffnen'
