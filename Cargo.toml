@@ -25,6 +25,8 @@ arboard = { version = "3.6", default-features = false, features = ["wayland-data
 serde = { version = "1", features = ["derive"] }
 toml = "1"
 tracing = "0.1"
+# Bereits über Slint (AccessKit) im Abhängigkeitsbaum; hier für das Taskleisten-Badge.
+zbus = { version = "5.19", default-features = false, features = ["async-io", "blocking-api"] }
 tracing-subscriber = { version = "0.3", default-features = false, features = ["std", "fmt", "registry", "ansi"] }
 regex = "1"
 libc = "0.2"

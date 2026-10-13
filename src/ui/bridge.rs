@@ -21,6 +21,7 @@ use crate::config::arch_update_conf::{ArchUpdateConf, VALUE_KEYS};
 use crate::config::settings::{self, MAX_LOG_ENTRIES, MIN_LOG_ENTRIES};
 use crate::config::{Settings, Theme as ThemeSetting};
 use crate::error::{AppError, ErrorKind};
+use crate::launcher_badge::LauncherBadge;
 use crate::logging::{self, LogFilter, LogLevel, LogStore};
 use crate::paths::{AppPaths, XdgDirs};
 use crate::state::{Operation, UpdateState};
@@ -56,6 +57,7 @@ struct Core {
     logs: LogStore,
     log_view: LogView,
     clipboard: Option<arboard::Clipboard>,
+    badge: LauncherBadge,
     workers: Vec<JoinHandle<()>>,
     refreshing: bool,
     quit_after_session: bool,
@@ -143,6 +145,7 @@ impl Bridge {
         xdg: XdgDirs,
         logs: LogStore,
         last_run: Option<crate::state::LastRunRecord>,
+        badge: LauncherBadge,
     ) -> Rc<Bridge> {
         let paths = xdg.app();
         let backend = std::sync::Arc::new(backend);
@@ -165,6 +168,7 @@ impl Bridge {
                 revision: 0,
             },
             clipboard: None,
+            badge,
             workers: Vec::new(),
             refreshing: false,
             quit_after_session: false,
@@ -650,6 +654,7 @@ impl Bridge {
         let workers = {
             let mut core = self.core.borrow_mut();
             core.controller.cancel_check_for_shutdown();
+            core.badge.shutdown();
             std::mem::take(&mut core.workers)
         };
         let deadline = Instant::now() + Duration::from_secs(3);
@@ -1136,6 +1141,9 @@ impl Core {
         g.set_kernel_version(ss(&d.kernel));
         g.set_self_update(ss(&d.self_update));
         g.set_pending_total(d.pending_total as i32);
+        if let Some(n) = c.badge_count() {
+            self.badge.set(u32::try_from(n).unwrap_or(u32::MAX));
+        }
         g.set_pending_pacman(d.pending_pacman as i32);
         g.set_pending_aur(d.pending_aur as i32);
         g.set_pending_flatpak(d.pending_flatpak as i32);

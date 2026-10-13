@@ -13,6 +13,7 @@ use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use cashy_updater_gui::config::{Settings, Theme as ThemeSetting};
+use cashy_updater_gui::launcher_badge::LauncherBadge;
 use cashy_updater_gui::logging::{self, LogStore};
 use cashy_updater_gui::paths::XdgDirs;
 use cashy_updater_gui::ui::bridge::Bridge;
@@ -64,6 +65,7 @@ fn gui_end_to_end_with_fake_arch_update() {
         xdg,
         logs.clone(),
         None,
+        LauncherBadge::disabled(),
     );
     ui.show().unwrap();
 

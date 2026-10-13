@@ -218,6 +218,20 @@ impl<B: Backend> Controller<B> {
             && !self.snapshot.as_ref().is_some_and(|s| s.instance_running)
     }
 
+    /// Zahl für das Taskleisten-Badge: bekannte ausstehende Updates, sonst 0.
+    /// `None` während einer Prüfung oder Installation – der bisherige Wert bleibt
+    /// stehen, statt zu flackern. Nach einem fehlgeschlagenen oder abgebrochenen
+    /// Lauf gelten die gemeldeten Updates weiter als ausstehend.
+    pub fn badge_count(&self) -> Option<usize> {
+        match self.state.update_state {
+            UpdateState::Checking | UpdateState::Upgrading(_) => None,
+            UpdateState::UpdateAvailable(n) | UpdateState::CheckIncomplete(n) => Some(n),
+            UpdateState::Finished(OutcomeKind::Completed) => Some(0),
+            UpdateState::Finished(_) => Some(self.pending().len()),
+            _ => Some(0),
+        }
+    }
+
     pub fn begin_upgrade(&mut self, opts: UpgradeOptions) -> Result<SessionSpec, AppError> {
         if self.state.is_busy() {
             return Err(AppError::new(ErrorKind::Busy, ""));

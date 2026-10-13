@@ -46,6 +46,7 @@ src/
 ├── app.rs                  Lebenszyklus: Pfade, Einstellungen, Logging, Fenster, Beenden
 ├── lib.rs
 ├── error.rs                Fehlerkategorien + Zuordnung von pacman/sudo-Meldungen
+├── launcher_badge.rs       Update-Zähler am Taskleisten-Symbol (D-Bus, Unity LauncherEntry)
 ├── logging.rs              tracing-Layer → Ringpuffer (GUI) + Logdatei, Filter, Export
 ├── paths.rs                XDG-Pfade (bildet die Pfadlogik von arch-update exakt nach)
 ├── state.rs                AppState (exklusive Vorgänge), UpdateState, letztes Ergebnis
@@ -93,6 +94,7 @@ packaging/                  Desktop-Datei, Icon, Install-Skript, PKGBUILD
 | **Automatische Prüfung** | Aktivieren über `arch-update --check --enable` (vorhandener Mechanismus), Deaktivieren über `systemctl --user disable --now arch-update.timer`. |
 | **cachy-update-Konfiguration** | Alle in `arch-update.conf(5)` dokumentierten Optionen außer `DiffProg` (frei ausführbarer Befehl; die pacnew-Verarbeitung ist in cachy-update deaktiviert). Es werden nur Werte akzeptiert, die auch `config.sh` akzeptiert. Kommentare und Reihenfolge bleiben erhalten. Fehlt die Datei, wird sie über `arch-update --gen-config` erzeugt. |
 | **Im Terminal** | Startet `arch-update.desktop` über `gio launch` (wie das Tray-Applet). Ein externer Lauf wird über das Lock erkannt. |
+| **Taskleisten-Badge** | Zeigt die Anzahl ausstehender Updates als Zahl am Taskleisten-Symbol, solange die App läuft. Das Signal `com.canonical.Unity.LauncherEntry.Update` geht über den Session-Bus (`zbus`) und wird u. a. vom Plasma-Task-Manager, Dash to Dock/Dash to Panel, Plank und Latte ausgewertet. Während einer Prüfung oder Installation bleibt der alte Wert stehen. Nach einem erfolgreichen Update verschwindet die Zahl, nach einem Fehler oder Abbruch bleibt sie. Die Zuordnung zum Fenster erfolgt über die Wayland-`app_id` bzw. X11-`WM_CLASS` `cashy-updater-gui`, also den Namen der Desktop-Datei. |
 | **Diagnose** | Versionen, Pfade, Sitzungstyp. Lässt sich kopieren. |
 | **Bedienung** | Tab-Navigation mit sichtbarem Fokusring, Enter/Leertaste auf Schaltflächen, `Strg+1…4` wechselt die Seite, `F5` startet die Prüfung. Barrierefreiheits-Labels sind gesetzt. |
 
@@ -145,6 +147,7 @@ cargo test
 | `tests/updater_tests.rs` | Adapter gegen das Test-Double `tests/fixtures/bin/cachy-update`: Version/Paket, fehlendes Tool, Prüfung, unvollständige Prüfung, Abbruch, News, Timer, Neustart-Erkennung, Startparameter, `--gen-config` |
 | `tests/integration_tests.rs` | Controller + Service + **echte PTY-Sitzung**: erfolgreicher Lauf, Neustart-Abfrage, Integritätsfehler, falsches Passwort, Abbruch an der Bestätigung, Abbruchsperre während pacman, parallele Vorgänge, fremdes Lock, aktuelles System, News, Logdatei und Export |
 | `tests/config_tests.rs` | fehlende, defekte und typfalsche Einstellungsdateien, Wertebereiche, atomares Speichern, conf-Roundtrip mit dem echten Beispiel |
+| `tests/badge_tests.rs` | Taskleisten-Badge gegen einen **privaten `dbus-daemon`** (nicht den Session-Bus des Nutzers): Signalinhalt, keine doppelten Signale, Ausblenden beim Beenden. Ohne `dbus-daemon` wird der Test übersprungen. |
 | `tests/gui_tests.rs` | **echtes Hauptfenster** im Slint-Test-Backend, bedient über Accessibility-Aktionen: Prüfung, Installation, Schließen-Dialog, Ja/Passwort/Ja, Abbruchsperre, Ergebnis und Schritte, Protokoll und Filter, Theme-Wechsel und Speichern, Schließen im Leerlauf |
 
 Die Test-Doubles (`tests/fixtures/bin/`) bilden Ausgabe, Abfragen, Statusdateien und Exit-Codes von arch-update 4.4.x nach. **Kein Test verwendet echte Paketquellen, `sudo` oder pacman-Transaktionen.**
@@ -155,6 +158,7 @@ Die Test-Doubles (`tests/fixtures/bin/`) bilden Ausgabe, Abfragen, Statusdateien
 - AUR-Updates mit `paru`/`yay`: Deren eigene Menüs und Pager (z. B. die PKGBUILD-Prüfung) laufen über das Eingabefeld der GUI. Für komfortable Reviews ist „Im Terminal“ gedacht;
 - „Im Terminal“ (`gio launch arch-update.desktop`) mit dem konfigurierten Terminal-Emulator;
 - Zwischenablage (`arboard`, Wayland data-control bzw. X11) und `xdg-open`;
+- Taskleisten-Badge in der jeweiligen Taskleiste. Voraussetzung: Die Desktop-Datei `cashy-updater-gui.desktop` ist installiert (z. B. über `install-local.sh` oder das Paket);
 - Darstellung mit der System-Akzentfarbe: Standard-Widgets wie Schalter, Checkboxen und Eingabefelder übernehmen die Akzentfarbe des Desktops.
 
 ## 7. Bekannte Einschränkungen
@@ -163,6 +167,7 @@ Die Test-Doubles (`tests/fixtures/bin/`) bilden Ausgabe, Abfragen, Statusdateien
 - Der Download-Fortschritt bei parallelen pacman-Downloads wird über die „Total (n/m)“-Zeile angenähert.
 - Flatpak-Einträge werden so angezeigt, wie arch-update sie speichert (Name und Version in einer Zeile).
 - „Letzte Installation“ bezieht sich auf Läufe über diese App. Für alle anderen Läufe zeigt die Übersicht die letzte pacman-Transaktion und das Datum des letzten Laufs laut arch-update.
+- Das Badge erscheint nur, solange die App läuft, denn es wird vom laufenden Prozess gesendet. GNOME zeigt es nur mit einer Dock-Erweiterung, die die Schnittstelle unterstützt (z. B. Dash to Dock).
 - Das Release-Binary ist mit den Slint-Standardfeatures etwa 31 MB groß.
 
 ## Lizenz

@@ -6,6 +6,7 @@
 pub mod app;
 pub mod config;
 pub mod error;
+pub mod launcher_badge;
 pub mod logging;
 pub mod paths;
 pub mod state;

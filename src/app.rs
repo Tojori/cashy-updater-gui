@@ -5,6 +5,7 @@ use std::process::ExitCode;
 use slint::ComponentHandle;
 
 use crate::config::{self, LoadOutcome};
+use crate::launcher_badge::{self, LauncherBadge};
 use crate::logging::{self, LogStore};
 use crate::paths::XdgDirs;
 use crate::state::LastRunRecord;
@@ -91,8 +92,22 @@ pub fn run() -> ExitCode {
         }
     };
 
+    // Wayland-app_id bzw. X11-WM_CLASS = Name der Desktop-Datei: Taskleiste und
+    // Badge ordnen das Fenster darüber `cashy-updater-gui.desktop` zu.
+    if let Err(e) = slint::set_xdg_app_id(launcher_badge::APP_ID) {
+        tracing::debug!("app_id konnte nicht gesetzt werden: {e}");
+    }
+
     let last_run = LastRunRecord::load(&paths.last_result_file);
-    let bridge = Bridge::install(&ui, service, settings, xdg, logs.clone(), last_run);
+    let bridge = Bridge::install(
+        &ui,
+        service,
+        settings,
+        xdg,
+        logs.clone(),
+        last_run,
+        LauncherBadge::session(),
+    );
 
     let result = ui.run();
     bridge.shutdown();

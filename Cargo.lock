@@ -648,6 +648,7 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
+ "zbus",
 ]
 
 [[package]]

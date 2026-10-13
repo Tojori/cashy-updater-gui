@@ -30,6 +30,7 @@ fn check_flow_updates_state_and_dashboard() {
     let c = checked_controller(&env);
     assert_eq!(c.state.update_state, UpdateState::UpdateAvailable(3));
     assert!(c.can_install());
+    assert_eq!(c.badge_count(), Some(3));
     let d = c.dashboard();
     assert_eq!(d.pending_total, 3);
     assert_eq!(d.pending_pacman, 2);
@@ -94,6 +95,7 @@ fn successful_upgrade_through_pty() {
         UpdateState::Finished(OutcomeKind::Completed)
     );
     assert!(c.last_run().unwrap().success);
+    assert_eq!(c.badge_count(), Some(0), "nach Erfolg kein Badge");
 }
 
 #[test]
@@ -124,6 +126,7 @@ fn integrity_failure_is_reported_as_failure() {
     assert_eq!(steps[Step::Install as usize].1, StepStatus::Pending);
     assert_eq!(c.error().unwrap().kind, ErrorKind::IntegrityFailed);
     assert!(!c.last_run().unwrap().success);
+    assert_eq!(c.badge_count(), Some(3), "Updates bleiben ausstehend");
 }
 
 #[test]
@@ -190,6 +193,11 @@ fn concurrent_operations_are_rejected() {
     let env = Env::new("success");
     let mut c = checked_controller(&env);
     let _token = c.begin_check().unwrap();
+    assert_eq!(
+        c.badge_count(),
+        None,
+        "während der Prüfung bleibt das Badge stehen"
+    );
     assert_eq!(c.begin_check().unwrap_err().kind, ErrorKind::Busy);
     assert_eq!(
         c.begin_upgrade(Default::default()).unwrap_err().kind,
@@ -230,6 +238,7 @@ fn up_to_date_system_does_not_offer_installation() {
     let env = Env::new("none");
     let mut c = checked_controller(&env);
     assert_eq!(c.state.update_state, UpdateState::UpToDate);
+    assert_eq!(c.badge_count(), Some(0));
     assert!(!c.can_install());
     assert!(c.begin_upgrade(Default::default()).is_err());
 }
